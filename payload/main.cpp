@@ -5,48 +5,62 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/beast.hpp>
 
+#include <boost/json.hpp>
+
 namespace asio = boost::asio;
 namespace beast = boost::beast;
 namespace http = beast::http;
+namespace ssl = asio::ssl;
+namespace json = boost::json;
 
+using tcp = asio::ip::tcp;
+using udp = asio::ip::udp;
 
-using ssl_socket = asio::ssl::stream<asio::ip::tcp::socket>;
+using ssl_socket = ssl::stream<tcp::socket>;
+using error_code = boost::system::error_code;
 
+http::request<http::string_body> prepare_request(const json::object& obj)
+{
+    http::request<http::string_body> req;
+    req.method(http::verb::post);
+    req.set(http::field::host, "api.telegram.org");
+    req.set(http::field::content_type, "application/json");
+    req.set(http::field::accept, "application/json");
+    req.set(http::field::connection, "close");
+    req.target("/bot6920020229:AAFsRJR5WUZcWk5StJxYdZPTQdBXB6vvLt0/sendMessage");
+    req.body() = json::serialize(obj);
+    req.prepare_payload();
+
+    return req;
+}
 
 int main() try
 {
     asio::io_context io_context;
-    asio::ssl::context ssl_context(asio::ssl::context::sslv23_client);
+    ssl::context ssl_context(asio::ssl::context::sslv23_client);
     ssl_socket socket(io_context, ssl_context);
 
-    asio::ip::tcp::resolver resolver(io_context);
+    tcp::resolver resolver(io_context);
     auto it = resolver.resolve({"api.telegram.org", "443"});
     asio::connect(socket.lowest_layer(), it);
 
-    socket.handshake(asio::ssl::stream_base::handshake_type::client);
+    socket.handshake(ssl::stream_base::handshake_type::client);
 
-    std::stringstream req;
-    req << "GET " << "/bot6920020229:AAFsRJR5WUZcWk5StJxYdZPTQdBXB6vvLt0/sendMessage";
-    req << "?chat_id=515352778";
-    req << "&text=HelloWorld";
-    req << " HTTP/1.1\r\n";
-    req << "Host: " << "api.telegram.org" << "\r\n";
-    req << "Accept: */*\r\n";
-    req << "Connection: close\r\n\r\n";
+    json::object req_body;
+    req_body["chat_id"] = "515352778";
+    req_body["text"] = "test";
 
-    asio::write(socket, asio::buffer(req.str()));
+    auto req = prepare_request(req_body);
 
-    std::string response;
-    boost::system::error_code ec;
+    http::write(socket, req);
 
-    do {
-        char buf[1024];
-        size_t bytes_transferred = socket.read_some(asio::buffer(buf), ec);
-        if (!ec) response.append(buf, buf + bytes_transferred);
-    } while (!ec);
+    beast::flat_buffer buffer;
+    http::response<http::dynamic_body> res;
+    res.set(http::field::content_type, "application/json");
+    http::read(socket, buffer, res);
 
-    // print and exit
-    std::cout << "Response received: '" << response << "'\n";
+    const auto body = beast::buffers_to_string(res.body().data());
+    std::cout << "Response received: '" << body << "'\n";
 
     return 0;
 } catch (std::exception& ex)
