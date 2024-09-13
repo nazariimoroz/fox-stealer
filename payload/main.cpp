@@ -1,27 +1,14 @@
 #include <iostream>
 
-#define _WIN32_WINNT 0x0601
+#include "net.h"
+
 #include <filesystem>
 #include <fstream>
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/beast.hpp>
-#include <boost/beast/http/fields.hpp>
 
-#include <boost/json.hpp>
+#include "senders/sender.h"
+#include "senders/telegram_sender.h"
 
-namespace asio = boost::asio;
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace ssl = asio::ssl;
-namespace json = boost::json;
-
-using tcp = asio::ip::tcp;
-using udp = asio::ip::udp;
-
-using ssl_socket = ssl::stream<tcp::socket>;
-using error_code = boost::system::error_code;
-
+#if 0
 http::request<http::string_body> prepare_request(const json::object& obj)
 {
     http::request<http::string_body> req;
@@ -109,4 +96,31 @@ int main() try
 } catch (std::exception& ex)
 {
     std::cerr << ex.what() << "\n";
+}
+
+#endif
+
+asio::awaitable<void> co_main()
+{
+    auto io_context = co_await asio::this_coro::executor;
+
+    std::unique_ptr<sender_t> sender{ new telegram_sender_t{
+        "6920020229:AAFsRJR5WUZcWk5StJxYdZPTQdBXB6vvLt0",
+        "515352778"
+    } } ;
+
+    const auto result = co_await sender->send_message("Hello World");
+    std::cout << json::serialize(result) << "\n";
+}
+
+int main()
+{
+    asio::io_context io_context;
+
+    asio::co_spawn(io_context, co_main(), asio::detached);
+
+    asio::io_context::work idle_work{io_context};
+    io_context.run();
+
+    return 0;
 }
