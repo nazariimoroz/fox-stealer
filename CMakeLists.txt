@@ -3,7 +3,7 @@ project(fox_stealer)
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(Boost REQUIRED COMPONENTS system json)
+find_package(Boost REQUIRED COMPONENTS system json circular_buffer intrusive smart_ptr)
 find_package(OpenSSL REQUIRED)
 
 add_subdirectory(payload)

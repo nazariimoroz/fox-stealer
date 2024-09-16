@@ -63,8 +63,7 @@ asio::awaitable<void> telegram_sender_t::create_connection(ssl_socket& socket)
     auto io_context = co_await asio::this_coro::executor;
 
     tcp::resolver resolver(io_context);
-    beast::error_code ec;
-    const auto it = co_await resolver.async_resolve({"api.telegram.org", "443"}, asio::deferred);
+    const auto it = co_await resolver.async_resolve(HOST, PORT, asio::deferred);
     co_await asio::async_connect(socket.lowest_layer(), it, asio::deferred);
 
     socket.handshake(ssl::stream_base::handshake_type::client);

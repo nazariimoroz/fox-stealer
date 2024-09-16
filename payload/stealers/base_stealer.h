@@ -10,7 +10,7 @@ public:
     base_stealer_t() = default;
     virtual ~base_stealer_t() = default;
 
-    virtual std::future<std::string> steal() = 0;
+    virtual asio::awaitable<std::string> steal() = 0;
 };
 
 
