@@ -11,6 +11,8 @@ add_executable(${PROJECT_NAME} main.cpp
         stealers/base_stealer.h
         stealers/win_stealer.cpp
         stealers/win_stealer.h
+        messages/message.h
+        messages/text_message.h
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} openssl::openssl)

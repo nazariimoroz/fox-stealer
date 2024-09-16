@@ -1,5 +1,7 @@
 #include "telegram_sender.h"
 
+#include "messages/text_message.h"
+
 telegram_sender_t::telegram_sender_t(std::string_view bot_token, std::string_view chat_id)
     : ssl_context(ssl::context::sslv23_client)
     , TELEGRAM_QUERY(HOST, PORT)
@@ -7,7 +9,23 @@ telegram_sender_t::telegram_sender_t(std::string_view bot_token, std::string_vie
     , CHAT_ID(chat_id)
 {}
 
-asio::awaitable<json::object> telegram_sender_t::send_message(std::string_view message)
+asio::awaitable<json::object> telegram_sender_t::send_message(const std::unique_ptr<message_t>& message)
+{
+    try
+    {
+        if(const auto text_message = dynamic_cast<text_message_t*>(message.get()))
+        {
+            co_return co_await send_text(text_message->text);
+        }
+
+        co_return net::create_internal_error("bad message");
+    } catch (std::exception& e)
+    {
+        co_return net::create_internal_error(e.what());
+    }
+}
+
+asio::awaitable<json::object> telegram_sender_t::send_text(std::string_view text)
 {
     try
     {
@@ -18,7 +36,7 @@ asio::awaitable<json::object> telegram_sender_t::send_message(std::string_view m
 
         json::object req_body;
         req_body["chat_id"] = CHAT_ID;
-        req_body["text"] = message;
+        req_body["text"] = text;
 
         http::request<http::string_body> req;
         req.method(http::verb::post);

