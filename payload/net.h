@@ -8,7 +8,12 @@
 
 #include <boost/asio/awaitable.hpp>
 
+#include <boost/asio/experimental/awaitable_operators.hpp>
+
 #include <boost/json.hpp>
+
+#include <iostream>
+#include <syncstream>
 
 #ifndef _NDEBUG
 #define DLOG(MSG) std::osyncstream(std::cerr) << MSG << std::endl
@@ -21,6 +26,8 @@ namespace beast = boost::beast;
 namespace http = beast::http;
 namespace ssl = asio::ssl;
 namespace json = boost::json;
+
+using namespace asio::experimental::awaitable_operators;
 
 using tcp = asio::ip::tcp;
 using udp = asio::ip::udp;
