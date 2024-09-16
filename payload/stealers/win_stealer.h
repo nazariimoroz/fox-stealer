@@ -1,7 +1,3 @@
-//
-// Copyright 2024 Nazarii Moroz
-//
-
 #ifndef WIN_STEALER_H
 #define WIN_STEALER_H
 

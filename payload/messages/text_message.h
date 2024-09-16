@@ -1,7 +1,3 @@
-//
-// Copyright 2024 Nazarii Moroz
-//
-
 #ifndef TEXT_MESSAGE_H
 #define TEXT_MESSAGE_H
 

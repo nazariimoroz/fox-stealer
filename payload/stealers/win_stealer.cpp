@@ -1,7 +1,3 @@
-//
-// Copyright 2024 Nazarii Moroz
-//
-
 #include "win_stealer.h"
 
 #include "net.h"
