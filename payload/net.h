@@ -1,9 +1,4 @@
-//
-// Copyright 2024 Nazarii Moroz
-//
-
-#ifndef NET_H
-#define NET_H
+#pragma once
 
 #define _WIN32_WINNT 0x0601
 #include <boost/asio.hpp>
@@ -14,6 +9,12 @@
 #include <boost/asio/awaitable.hpp>
 
 #include <boost/json.hpp>
+
+#ifndef _NDEBUG
+#define DLOG(MSG) std::osyncstream(std::cerr) << MSG << std::endl
+#else
+#define DLOG(MSG) do {} while (0)
+#endif
 
 namespace asio = boost::asio;
 namespace beast = boost::beast;
@@ -27,4 +28,14 @@ using udp = asio::ip::udp;
 using ssl_socket = ssl::stream<tcp::socket>;
 using error_code = boost::system::error_code;
 
-#endif //NET_H
+namespace net
+{
+    inline json::object create_internal_error(const char* message)
+    {
+        return {
+            {"ok", false},
+            {"error_code", "500"},
+            {"description", message}
+        };
+    }
+}

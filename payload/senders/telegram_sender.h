@@ -24,16 +24,6 @@ protected:
 
 protected:
     asio::awaitable<void> create_connection(ssl_socket& socket);
-
-    // TODO Move out
-    json::object create_internal_error(const char* message) const
-    {
-        return {
-                {"ok", false},
-                {"error_code", "500"},
-                {"description", message}
-            };
-    }
 };
 
 

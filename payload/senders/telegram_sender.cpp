@@ -43,7 +43,7 @@ asio::awaitable<json::object> telegram_sender_t::send_message(std::string_view m
 
     } catch (const std::exception& e)
     {
-        co_return create_internal_error(e.what());
+        co_return net::create_internal_error(e.what());
     }
 }
 

