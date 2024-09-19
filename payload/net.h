@@ -18,7 +18,7 @@
 
 #define FSGLUE2(x, y) x##y
 #define FSGLUE(x, y) FSGLUE2(x, y)
-#define FSUNIQUE_NAME FSGLUE(_outcome_try_unique_name_temporary, __COUNTER__)
+#define FSUNIQUE_NAME FSGLUE(_fs_unique_name_temporary, __COUNTER__)
 
 #define FS_TRY_EXPECTED_RETURN(VARIABLE, EXPECTED_FUN) BOOST_OUTCOME_TRYA(VARIABLE, EXPECTED_FUN)
 
