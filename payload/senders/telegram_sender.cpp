@@ -19,7 +19,7 @@ asio::awaitable<json::object> telegram_sender_t::send_message(const std::unique_
     {
         if(const auto text_message = dynamic_cast<text_message_t*>(message.get()))
         {
-            co_return co_await send_text(text_message->text);
+            co_return co_await send_text(*text_message);
         }
 
         if(const auto photo_message = dynamic_cast<photo_message_t*>(message.get()))
@@ -39,7 +39,7 @@ asio::awaitable<json::object> telegram_sender_t::send_message(const std::unique_
     }
 }
 
-asio::awaitable<json::object> telegram_sender_t::send_text(std::string_view text)
+asio::awaitable<json::object> telegram_sender_t::send_text(const text_message_t& text)
 {
     try
     {
@@ -50,7 +50,7 @@ asio::awaitable<json::object> telegram_sender_t::send_text(std::string_view text
 
         json::object req_body;
         req_body["chat_id"] = CHAT_ID;
-        req_body["text"] = text;
+        req_body["text"] = text.text;
 
         http::request<http::string_body> req;
         req.method(http::verb::post);

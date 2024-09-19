@@ -30,10 +30,6 @@ public:
     {
         error = in_error.str();
     }
-    error_message_t(const error_message_t& em) = default;
-    error_message_t& operator=(const error_message_t& em) = default;
-    error_message_t(error_message_t&& em) = default;
-    error_message_t& operator=(error_message_t&& em) = default;
     ~error_message_t() override = default;
 
     std::string error;
