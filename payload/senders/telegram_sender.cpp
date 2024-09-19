@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include "messages/error_message.h"
 #include "messages/photo_message.h"
 #include "messages/text_message.h"
 
@@ -24,6 +25,11 @@ asio::awaitable<json::object> telegram_sender_t::send_message(const std::unique_
         if(const auto photo_message = dynamic_cast<photo_message_t*>(message.get()))
         {
             co_return co_await send_photo(*photo_message);
+        }
+
+        if(const auto error_message = dynamic_cast<error_message_t*>(message.get()))
+        {
+            co_return co_await send_error(*error_message);
         }
 
         co_return net::create_internal_error("bad message");
@@ -106,6 +112,48 @@ asio::awaitable<json::object> telegram_sender_t::send_photo(const photo_message_
 
         req.body() = oss.str();
         req.content_length(req.body().size());
+
+        co_await http::async_write(socket, req, asio::deferred);
+
+        beast::flat_buffer buffer;
+        http::response<http::dynamic_body> res;
+        res.set(http::field::content_type, "application/json");
+        co_await http::async_read(socket, buffer, res, asio::deferred);
+
+        const auto body_string = beast::buffers_to_string(res.body().data());
+        co_return json::parse(body_string).as_object();
+
+    } catch (const std::exception& e)
+    {
+        co_return net::create_internal_error(e.what());
+    }
+}
+
+asio::awaitable<json::object> telegram_sender_t::send_error(const error_message_t& error)
+{
+    try
+    {
+        auto io_context = co_await asio::this_coro::executor;
+
+        ssl_socket socket(io_context, ssl_context);
+        co_await create_connection(socket);
+
+        json::object req_body;
+        req_body["chat_id"] = CHAT_ID;
+        req_body["text"] = error.error;
+
+        DLOG(error.error);
+
+        http::request<http::string_body> req;
+        req.method(http::verb::post);
+        req.version(11);
+        req.set(http::field::host, HOST);
+        req.set(http::field::content_type, "application/json");
+        req.set(http::field::accept, "application/json");
+        req.set(http::field::connection, "close");
+        req.target("/bot" + BOT_TOKEN + "/sendMessage");
+        req.body() = json::serialize(req_body);
+        req.prepare_payload();
 
         co_await http::async_write(socket, req, asio::deferred);
 
