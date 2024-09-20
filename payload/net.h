@@ -1,6 +1,7 @@
 #pragma once
 
 #define _WIN32_WINNT 0x0601
+#include <filesystem>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/beast.hpp>
@@ -22,6 +23,10 @@
 
 #define FS_TRY_EXPECTED_RETURN(VARIABLE, EXPECTED_FUN) BOOST_OUTCOME_TRYA(VARIABLE, EXPECTED_FUN)
 
+#define FS_DEFER2(UNIQUE, FUNC) \
+    std::shared_ptr<void> UNIQUE(nullptr, FUNC )
+#define FS_DEFER(FUNC) FS_DEFER2(FSUNIQUE_NAME, FUNC)
+
 #ifndef _NDEBUG
 #define DLOG(MSG) std::osyncstream(std::cerr) << MSG << std::endl
 #else
@@ -33,6 +38,7 @@ namespace beast = boost::beast;
 namespace http = beast::http;
 namespace ssl = asio::ssl;
 namespace json = boost::json;
+namespace fs = std::filesystem;
 
 using namespace asio::experimental::awaitable_operators;
 
@@ -75,6 +81,52 @@ namespace net
         return std::move(*begin) && std::move(wait(begin + 1, end));
     }
 
+    inline std::filesystem::path get_temp_path()
+    {
+        thread_local fs::path temp_path;
+        if(temp_path == "")
+        {
+            TCHAR appdata_path[MAX_PATH];
+            GetTempPath(MAX_PATH, appdata_path);
+            temp_path = appdata_path;
+        }
+
+        return temp_path;
+    }
+
+    inline std::string generate_random_string(std::size_t length)
+    {
+        static std::string chars(
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+        std::string to_ret;
+        to_ret.reserve(length);
+        for(int i = 0; i < length; ++i)
+            to_ret += chars[rand() % (chars.size() - 1)];
+
+        return to_ret;
+    }
+
     template<class T>
     using expected = boost::outcome_v2::result<T, error_t>;
+
+    struct cookie_t
+    {
+        std::string host;
+        std::string name;
+        std::string path;
+        std::string cookie;
+        std::uint32_t expiry;
+
+        cookie_t(std::string_view in_host, std::string_view in_name, std::string_view in_path
+            , std::string_view in_cookie, std::uint32_t in_expiry)
+        {
+            host = in_host;
+            name = in_name;
+            path = in_path;
+            cookie = in_cookie;
+            expiry = in_expiry;
+        }
+    };
 }
