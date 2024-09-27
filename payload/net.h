@@ -108,6 +108,15 @@ namespace net
         return to_ret;
     }
 
+    inline fs::path get_temp_unique_file_path()
+    {
+        return fs::temp_directory_path()
+#ifndef _NDEBUG
+                / "test_cookies"
+#endif
+                / net::generate_random_string(15);
+    }
+
     template<class T>
     using expected = boost::outcome_v2::result<T, error_t>;
 
