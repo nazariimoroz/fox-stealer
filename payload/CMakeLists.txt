@@ -19,13 +19,10 @@ add_executable(${PROJECT_NAME} main.cpp
         stealers/chrome_stealer.cpp
         stealers/chrome_stealer.h
         messages/error_message.h
-        crypto/aead.cpp
-        crypto/aead.h
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         ${Boost_LIBRARIES}
         openssl::openssl
-        SQLiteCpp
-        cryptopp::cryptopp)
+        SQLiteCpp)
 target_include_directories(${PROJECT_NAME} PRIVATE .)

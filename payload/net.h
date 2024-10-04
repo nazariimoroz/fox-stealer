@@ -16,15 +16,8 @@
 
 #include <iostream>
 #include <ranges>
-#include <span>
 #include <syncstream>
 #include <Wincrypt.h>
-
-#include <cryptopp/gcm.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/base64.h>
-#include <cryptopp/hex.h>
 
 #define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
 
