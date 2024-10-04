@@ -72,48 +72,37 @@ net::expected<std::vector<BYTE>> decrypt_data(const std::vector<BYTE>& buffer,
         if(buffer_string.starts_with("v10") || buffer_string.starts_with("v11"))
         {
             auto iv = buffer
-                | rng::drop(3)
-                | rng::take(12)
+                | rng::drop(3)  // v10
+                | rng::take(12) // iv length
                 | rng::as_t<std::vector<BYTE>>{};
             iv.push_back(0);
 
             auto cipher_text = buffer
-                | rng::drop(15)
-                | rng::as_t<std::vector<BYTE>>{};
-
-            auto tag = cipher_text
-                | rng::drop(cipher_text.size() - 16)
-                | rng::as_t<std::vector<BYTE>>{};
-            tag.push_back(0);
-
-            cipher_text = cipher_text
-                | rng::take(cipher_text.size() - tag.size())
+                | rng::drop(15)                          // (v10) + (iv length)
+                | rng::take( (buffer.size() - 15) - 16 ) // (current size) - tag size
                 | rng::as_t<std::vector<BYTE>>{};
             cipher_text.push_back(0);
 
-            auto result = crypto::decrypt_aes256_gcm(
-                encryption_key_string.c_str(),
-                (char *)iv.data(),
-                (char *)cipher_text.data(),
-                &test,
-                len);
+            auto tag = buffer
+                | rng::drop(buffer.size() - 16) // buffer - tag length
+                | rng::as_t<std::vector<BYTE>>{};
+            tag.push_back(0);
 
-#if 0
-            decrypred_data.resize(/*max output size: */cipher_text.size(), 0);
-
+            decrypred_data.resize(cipher_text.size(), 0);
             auto decrypred_data_len = net::aes_gsm::decrypt(
-                cipher_text.data(), cipher_text.size(),
-                (BYTE*)"", 0,
+                cipher_text.data(),
+                cipher_text.size() - 1/*Null Terminator*/,
+                /*AAD: */ nullptr, 0,
                 tag.data(),
                 (BYTE*)encryption_key_string.data(),
-                iv.data(), iv.size(),
-                decrypred_data.data());
+                iv.data(),
+                decrypred_data.data()
+            );
 
             if(decrypred_data_len == -1)
                 return net::error_t("Chrome(ERROR): cant decrypt cookie v10 v11");
 
             decrypred_data.resize(decrypred_data_len);
-#endif
         }
         else if(buffer_string.starts_with("v20"))
         {
