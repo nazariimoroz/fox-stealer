@@ -71,23 +71,36 @@ net::expected<std::vector<BYTE>> decrypt_data(const std::vector<BYTE>& buffer,
         std::string buffer_string{ buffer.begin(), buffer.end() };
         if(buffer_string.starts_with("v10") || buffer_string.starts_with("v11"))
         {
-            std::vector<BYTE> iv;
-            std::copy_n(std::begin(buffer) + 3, 15,
-                std::back_inserter(iv));
+            auto iv = buffer
+                | rng::drop(3)
+                | rng::take(12)
+                | rng::as_t<std::vector<BYTE>>{};
+            iv.push_back(0);
 
-            std::vector<BYTE> cipher_text_temp;
-            std::copy(std::begin(buffer) + 15, std::end(buffer),
-                std::back_inserter(cipher_text_temp));
+            auto cipher_text = buffer
+                | rng::drop(15)
+                | rng::as_t<std::vector<BYTE>>{};
 
-            std::vector<BYTE> tag;
-            std::copy(std::end(cipher_text_temp) - 16, std::end(cipher_text_temp),
-                std::back_inserter(tag));
+            auto tag = cipher_text
+                | rng::drop(cipher_text.size() - 16)
+                | rng::as_t<std::vector<BYTE>>{};
+            tag.push_back(0);
 
-            std::vector<BYTE> cipher_text;
-            std::copy_n(cipher_text_temp.begin(), cipher_text_temp.size() - tag.size(),
-                std::back_inserter(cipher_text));
+            cipher_text = cipher_text
+                | rng::take(cipher_text.size() - tag.size())
+                | rng::as_t<std::vector<BYTE>>{};
+            cipher_text.push_back(0);
 
+            auto result = crypto::decrypt_aes256_gcm(
+                encryption_key_string.c_str(),
+                (char *)iv.data(),
+                (char *)cipher_text.data(),
+                &test,
+                len);
+
+#if 0
             decrypred_data.resize(/*max output size: */cipher_text.size(), 0);
+
             auto decrypred_data_len = net::aes_gsm::decrypt(
                 cipher_text.data(), cipher_text.size(),
                 (BYTE*)"", 0,
@@ -95,13 +108,19 @@ net::expected<std::vector<BYTE>> decrypt_data(const std::vector<BYTE>& buffer,
                 (BYTE*)encryption_key_string.data(),
                 iv.data(), iv.size(),
                 decrypred_data.data());
+
             if(decrypred_data_len == -1)
                 return net::error_t("Chrome(ERROR): cant decrypt cookie v10 v11");
+
             decrypred_data.resize(decrypred_data_len);
+#endif
+        }
+        else if(buffer_string.starts_with("v20"))
+        {
+            return net::error_t("Chrome(ERROR): cant decrypt v20");
         }
         else
         {
-            std::vector<BYTE> to_ret;
             if(auto exp = net::win_crypt::encrypt(buffer.data(), buffer.size()))
                 decrypred_data = exp.assume_value();
             else

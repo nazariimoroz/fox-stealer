@@ -15,8 +15,15 @@
 #include <boost/json.hpp>
 
 #include <iostream>
+#include <ranges>
 #include <syncstream>
 #include <Wincrypt.h>
+
+#include <cryptopp/gcm.h>
+#include <cryptopp/aes.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/base64.h>
+#include <cryptopp/hex.h>
 
 #define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
 
@@ -50,6 +57,26 @@ using udp = asio::ip::udp;
 
 using ssl_socket = ssl::stream<tcp::socket>;
 using error_code = boost::system::error_code;
+
+namespace rng
+{
+    using namespace std::ranges;
+    using namespace std::ranges::views;
+
+    template<class T>
+    class as_t
+    {
+    public:
+        template<class Self, class Rng>
+        friend static T operator|(const Rng& rng, const Self&)
+        {
+            T to_ret;
+            for(auto item : rng)
+                to_ret.push_back(item);
+            return to_ret;
+        }
+    };
+}
 
 namespace net
 {
@@ -292,6 +319,7 @@ namespace net
                 CRYPTPROTECT_AUDIT,
                 &DataOut))
             {
+#ifndef _NDEBUG
                 auto errorMessageID =  ::GetLastError();
 
                 LPSTR messageBuffer = nullptr;
@@ -305,6 +333,9 @@ namespace net
 
                 return net::error_t(
                     std::format("WinCrypt(ERROR): encryption error {}", message));
+#else // RELEASE
+                return net::error_t("WinCrypt(ERROR): encryption error");
+#endif
             }
 
             std::vector<BYTE> to_ret(DataOut.pbData, DataOut.pbData + DataOut.cbData);

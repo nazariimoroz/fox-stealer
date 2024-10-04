@@ -21,5 +21,9 @@ add_executable(${PROJECT_NAME} main.cpp
         messages/error_message.h
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES} openssl::openssl SQLiteCpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${Boost_LIBRARIES}
+        openssl::openssl
+        SQLiteCpp
+        cryptopp::cryptopp)
 target_include_directories(${PROJECT_NAME} PRIVATE .)
