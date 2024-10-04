@@ -68,7 +68,7 @@ net::expected<std::vector<BYTE>> decrypt_data(const std::vector<BYTE>& buffer,
 
     try
     {
-        std::string buffer_string{ buffer.begin(), buffer.end() };
+        std::string_view buffer_string{ (const char*)buffer.data(), buffer.size() };
         if(buffer_string.starts_with("v10") || buffer_string.starts_with("v11"))
         {
             auto iv = buffer
@@ -90,17 +90,16 @@ net::expected<std::vector<BYTE>> decrypt_data(const std::vector<BYTE>& buffer,
 
             decrypred_data.resize(cipher_text.size(), 0);
             auto decrypred_data_len = net::aes_gsm::decrypt(
-                cipher_text.data(),
-                cipher_text.size() - 1/*Null Terminator*/,
+                cipher_text.data(), cipher_text.size() - 1/*Null Terminator*/,
                 /*AAD: */ nullptr, 0,
-                tag.data(),
+                tag.data(), tag.size() - 1/*Null Terminator*/,
                 (BYTE*)encryption_key_string.data(),
-                iv.data(),
+                iv.data(), iv.size() - 1/*Null Terminator*/,
                 decrypred_data.data()
             );
 
             if(decrypred_data_len == -1)
-                return net::error_t("Chrome(ERROR): cant decrypt cookie v10 v11");
+                return net::error_t("Chrome(ERROR): cant decrypt, AES 256 GCM, v10 v11");
 
             decrypred_data.resize(decrypred_data_len);
         }

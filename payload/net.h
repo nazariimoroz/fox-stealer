@@ -171,7 +171,7 @@ namespace net
         }
 
         inline int decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* aad,
-                    int aad_len, unsigned char* tag, unsigned char* key, unsigned char* iv,
+                    int aad_len, unsigned char* tag, size_t tag_size, unsigned char* key, unsigned char* iv, size_t iv_size,
                     unsigned char* plaintext)
         {
             EVP_CIPHER_CTX* ctx;
@@ -186,10 +186,9 @@ namespace net
                 handleErrors();
 
             /* Set IV length. Not necessary if this is 12 bytes (96 bits) */
-            const auto ivsize = strlen((char*)iv);
-            if(ivsize != 12)
+            if(iv_size != 12)
             {
-                if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, ivsize, NULL))
+                if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_size, NULL))
                     handleErrors();
             }
 
@@ -218,7 +217,7 @@ namespace net
             plaintext_len += len;
 
             /* Set expected tag value. Works in OpenSSL 1.0.1d and later */
-            if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, strlen((char*)tag), tag))
+            if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag_size, tag))
                 handleErrors();
 
             /* Finalise the decryption. A positive return value indicates success,
