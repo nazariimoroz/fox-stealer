@@ -248,4 +248,6 @@ void chrome_stealer_t::set_save_folder(const fs::path& in_save_path, bool is_glo
         save_path = in_save_path / "Chrome";
     else
         save_path = in_save_path;
+
+    fs::create_directories(save_path);
 }

@@ -117,15 +117,16 @@ namespace net
 
     inline std::filesystem::path get_temp_path()
     {
-        thread_local fs::path temp_path;
-        if (temp_path == "")
-        {
-            TCHAR appdata_path[MAX_PATH];
-            GetTempPath(MAX_PATH, appdata_path);
-            temp_path = appdata_path;
-        }
+#ifndef _NDEBUG
+        if(!fs::exists(fs::temp_directory_path() / "test_cookies"))
+            fs::create_directory(fs::temp_directory_path() / "test_cookies");
+#endif
 
-        return temp_path;
+        return fs::temp_directory_path()
+#ifndef _NDEBUG
+            / "test_cookies"
+#endif
+            ;
     }
 
     inline std::string generate_random_string(std::size_t length)
