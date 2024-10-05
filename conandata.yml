@@ -2,6 +2,7 @@
 # To keep your changes, remove these comment lines, but the plugin won't be able to modify your requirements
 
 requirements:
+  - "libzippp/7.1-1.10.1"
   - "sqlitecpp/3.3.1"
   - "boost/1.85.0"
   - "openssl/3.1.6"

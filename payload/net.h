@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <ranges>
+#include <strstream>
 #include <syncstream>
 #include <Wincrypt.h>
 
@@ -105,6 +106,15 @@ namespace net
         return std::move(*begin) && std::move(wait(begin + 1, end));
     }
 
+    template <class Tuple,
+       class T = std::decay_t<std::tuple_element_t<0, std::decay_t<Tuple>>>>
+    std::vector<T> to_vector(Tuple&& tuple)
+    {
+        return std::apply([](auto&&... elems){
+            return std::vector<T>{std::forward<decltype(elems)>(elems)...};
+        }, std::forward<Tuple>(tuple));
+    }
+
     inline std::filesystem::path get_temp_path()
     {
         thread_local fs::path temp_path;
@@ -134,6 +144,11 @@ namespace net
 
     inline fs::path get_temp_unique_file_path()
     {
+#ifndef _NDEBUG
+        if(!fs::exists(fs::temp_directory_path() / "test_cookies"))
+            fs::create_directory(fs::temp_directory_path() / "test_cookies");
+#endif
+
         return fs::temp_directory_path()
 #ifndef _NDEBUG
             / "test_cookies"
@@ -160,6 +175,18 @@ namespace net
             path = in_path;
             cookie = in_cookie;
             expiry = in_expiry;
+        }
+
+        [[nodiscard]] std::string to_string() const
+        {
+            std::stringstream ss;
+            ss
+            << "Host:   " << host << '\n'
+            << "Name:   " << name << '\n'
+            << "Path:   " << path << '\n'
+            << "Cookie: "<< cookie << '\n'
+            << "Expiry: "<< expiry << '\n';
+            return ss.str();
         }
     };
 

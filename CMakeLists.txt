@@ -7,6 +7,7 @@ find_package(Boost REQUIRED COMPONENTS system json circular_buffer intrusive sma
 find_package(OpenSSL REQUIRED)
 find_package(SQLiteCpp REQUIRED)
 find_package(cryptopp REQUIRED)
+find_package(libzippp REQUIRED)
 
 add_subdirectory(payload)
 

