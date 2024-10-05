@@ -14,7 +14,7 @@ public:
     inline void init_with_path(std::string_view in_path)
     {/*TODO*/}
 
-    inline void move_to_data_and_set_path(std::string& in_data, std::string_view in_path)
+    inline void move_to_data_and_set_path(std::string&& in_data, std::string_view in_path)
     {
         path = in_path;
         data = std::move(in_data);
