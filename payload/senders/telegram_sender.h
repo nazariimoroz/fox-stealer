@@ -2,6 +2,8 @@
 #define TELEGRAM_SENDER_H
 #include "sender.h"
 
+class file_message_t;
+
 class telegram_sender_t : public sender_t
 {
 public:
@@ -12,7 +14,7 @@ public:
     asio::awaitable<json::object> send_text(const text_message_t& text) override;
     asio::awaitable<json::object> send_photo(const photo_message_t& message) override;
     asio::awaitable<json::object> send_error(const error_message_t& error) override;
-    asio::awaitable<void> send_file(std::string_view path) override;
+    asio::awaitable<json::object> send_file(const file_message_t& message) override;
 
 protected:
     ssl::context ssl_context;

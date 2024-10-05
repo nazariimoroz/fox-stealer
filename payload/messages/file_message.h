@@ -14,9 +14,10 @@ public:
 
     inline void init_with_path(std::string_view in_path)
     {
-        std::ifstream fin(in_path);
+        path = in_path;
+        std::ifstream fin(path, std::ios::binary);
         if(!fin.is_open())
-            DLOG(std::format("FileMessage(ERROR): cant open {}", in_path));
+            DLOG(std::format("FileMessage(ERROR): cant open {}", path));
         data.assign((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
         fin.close();
     }

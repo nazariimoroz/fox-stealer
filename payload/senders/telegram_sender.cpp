@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "messages/error_message.h"
+#include "messages/file_message.h"
 #include "messages/photo_message.h"
 #include "messages/text_message.h"
 
@@ -32,7 +33,12 @@ asio::awaitable<json::object> telegram_sender_t::send_message(const std::unique_
             co_return co_await send_error(*error_message);
         }
 
-        co_return net::create_internal_error("bad message");
+        if(const auto file_message = dynamic_cast<file_message_t*>(message.get()))
+        {
+            co_return co_await send_file(*file_message);
+        }
+
+        co_return net::create_internal_error("TelegramSender(ERROR): bad message");
     } catch (std::exception& e)
     {
         co_return net::create_internal_error(e.what());
@@ -171,9 +177,54 @@ asio::awaitable<json::object> telegram_sender_t::send_error(const error_message_
     }
 }
 
-asio::awaitable<void> telegram_sender_t::send_file(std::string_view path)
+asio::awaitable<json::object> telegram_sender_t::send_file(const file_message_t& message)
 {
-    co_return;
+    try
+    {
+        auto io_context = co_await asio::this_coro::executor;
+
+        ssl_socket socket(io_context, ssl_context);
+        co_await create_connection(socket);
+
+        http::request<http::string_body> req;
+        req.method(http::verb::post);
+        req.version(11);
+        req.set(http::field::host, HOST);
+        req.set(http::field::content_type, "multipart/form-data; boundary=boundary");
+        req.set(http::field::accept, "application/json");
+        req.set(http::field::connection, "close");
+        req.target("/bot" + BOT_TOKEN + "/sendDocument");
+
+        // Construct the multipart form data
+        std::ostringstream oss;
+        oss << "--boundary\r\n";
+        oss << "Content-Disposition: form-data; name=\"chat_id\"\r\n";
+        oss << "Content-Type: text/plain\r\n\r\n";
+        oss << CHAT_ID << "\r\n";
+        oss << "--boundary\r\n";
+        oss << "Content-Disposition: form-data; name=\"document\"; filename=\"" << std::filesystem::path(message.path).filename().string() << "\"\r\n";
+        oss << "Content-Type: file/" << std::filesystem::path(message.path).filename().extension().string().substr(1) << "\r\n\r\n";
+
+        oss << message.data << "\r\n";
+        oss << "--boundary--\r\n";
+
+        req.body() = oss.str();
+        req.content_length(req.body().size());
+
+        co_await http::async_write(socket, req, asio::deferred);
+
+        beast::flat_buffer buffer;
+        http::response<http::dynamic_body> res;
+        res.set(http::field::content_type, "application/json");
+        co_await http::async_read(socket, buffer, res, asio::deferred);
+
+        const auto body_string = beast::buffers_to_string(res.body().data());
+        co_return json::parse(body_string).as_object();
+
+    } catch (const std::exception& e)
+    {
+        co_return net::create_internal_error(e.what());
+    }
 }
 
 asio::awaitable<void> telegram_sender_t::create_connection(ssl_socket& socket)
