@@ -21,6 +21,9 @@ public:
     }
 
     std::string path;
+
+    // zero terminator IS NOT AN END of photo data
+    // be carefull in use
     std::string data;
 };
 

