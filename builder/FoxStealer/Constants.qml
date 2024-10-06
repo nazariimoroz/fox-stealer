@@ -10,11 +10,11 @@ QtObject {
 
     /* Edit this comment to add your custom font */
     readonly property font font: Qt.font({
-                                             family: Qt.application.font.family,
+                                             family: "Arial",
                                              pixelSize: Qt.application.font.pixelSize
                                          })
     readonly property font largeFont: Qt.font({
-                                                  family: Qt.application.font.family,
+                                                  family: "Arial",
                                                   pixelSize: Qt.application.font.pixelSize * 1.6
                                               })
 

