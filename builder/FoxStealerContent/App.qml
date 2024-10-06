@@ -5,14 +5,15 @@ import QtQuick 6.6
 import FoxStealer
 
 Window {
-    width: mainScreen.width
-    height: mainScreen.height
+    width: Constants.width
+    height: Constants.height
 
     visible: true
     title: "FoxStealer"
 
     Main {
         id: mainScreen
+        anchors.fill: parent
     }
 
 }

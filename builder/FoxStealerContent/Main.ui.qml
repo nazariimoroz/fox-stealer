@@ -13,8 +13,6 @@ import QtQuick.Layouts
 
 Pane {
     id: mainFrame
-    width: Constants.width
-    height: Constants.height
     padding: mainFrame.baseSpacing
     property int baseSpacing: 10
 
@@ -51,43 +49,75 @@ Pane {
 
         RowLayout {
             id: settingsRowLayout
-            width: 100
-            height: 100
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-            GroupBox {
-                id: baseSettGroupBox
-                width: 200
-                height: 200
-                title: qsTr("BASE")
-                Layout.preferredWidth: 200
-                Layout.fillWidth: false
+            ColumnLayout {
+                id: baseSettColumn
+                spacing: mainFrame.baseSpacing
+                Layout.maximumWidth: 200
                 Layout.fillHeight: true
+                clip: true
 
-                Column {
-                    id: baseSettColumn
-                    anchors.fill: parent
-                    anchors.topMargin: 22
-                    padding: 10
+                Repeater {
+                    id: checkBoxRepeater
+                    model: ["Anti VM", "Melt"]
 
-                    Repeater {
-                        id: checkBoxrepeater
-                        model: ["Anti VM", "Melt"]
-
-                        CheckBox {
-                            id: antiVMCheckBox
-                            required property string modelData
-                            text: antiVMCheckBox.modelData
-                            checkState: Qt.Checked
-                        }
+                    CheckBox {
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+                        required property string modelData
+                        text: modelData
+                        checkState: Qt.Checked
                     }
                 }
+
+                Button {
+                    id: icoButton
+                    text: qsTr("SELECT ICO")
+                    Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+                    Layout.fillWidth: true
+                }
             }
-            Column {
+            ColumnLayout {
                 id: stealSettColumn
-                width: 200
-                height: 400
+                clip: true
                 Layout.fillHeight: true
                 Layout.fillWidth: true
+
+                GridView {
+                    id: gridView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    model: ["CHROME", "FIREFOX", "SCREEN SHOT"]
+                    delegate: CheckBox {
+                        required property string modelData
+                        text: modelData
+                        checkState: Qt.Checked
+                    }
+
+                    cellWidth: gridView.width / 3 > 100 ? gridView.width / 3 : 0
+                }
+            }
+        }
+
+        RowLayout {
+            id: statusAndBuildRowLayout
+            Layout.maximumHeight: 50
+            Layout.fillWidth: true
+
+            Label {
+                id: buildStatusLabel
+                text: qsTr("TODO OK || NOT OK")
+                Layout.fillHeight: false
+                Layout.fillWidth: true
+                font.pointSize: 17
+            }
+
+            Button {
+                id: buildButton
+                text: qsTr("BUILD")
+                Layout.fillHeight: true
             }
         }
     }
