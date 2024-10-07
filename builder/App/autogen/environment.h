@@ -6,8 +6,8 @@
 #include <QGuiApplication>
 #include "qqmlextensionplugin.h"
 
-Q_IMPORT_QML_PLUGIN(FoxStealerPlugin)
 Q_IMPORT_QML_PLUGIN(FoxStealerContentPlugin)
+Q_IMPORT_QML_PLUGIN(FoxStealerPlugin)
 
 const char mainQmlFile[] = "qrc:/qt/qml/FoxStealerContent/App.qml";
 
