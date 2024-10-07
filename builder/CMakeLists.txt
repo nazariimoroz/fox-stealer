@@ -17,6 +17,7 @@ set(QML_IMPORT_PATH ${QT_QML_OUTPUT_DIRECTORY}
 )
 
 find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick)
+add_subdirectory(Service)
 qt_standard_project_setup()
 
 
@@ -27,6 +28,8 @@ qt_add_resources(${CMAKE_PROJECT_NAME} "configuration"
         qtquickcontrols2.conf)
 
 include(qds)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
+        Service)
 
 if (BUILD_QDS_COMPONENTS)
     include(qmlcomponents OPTIONAL)

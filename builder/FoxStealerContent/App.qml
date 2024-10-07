@@ -16,5 +16,8 @@ Window {
         anchors.fill: parent
     }
 
+    FsPayloadGeneratingService {
+        icoFileDialog: mainScreen.icoFileDialog
+    }
 }
 

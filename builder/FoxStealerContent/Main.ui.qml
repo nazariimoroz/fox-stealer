@@ -10,11 +10,13 @@ import QtQuick 6.6
 import QtQuick.Controls 6.6
 import FoxStealer
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 Pane {
     id: mainFrame
     padding: mainFrame.baseSpacing
     property int baseSpacing: 10
+    property alias icoFileDialog: icoFileDialog
 
     ColumnLayout {
         id: columnLayout
@@ -126,6 +128,19 @@ Pane {
                 font: Constants.largeFont
                 text: qsTr("BUILD")
                 Layout.fillHeight: true
+            }
+        }
+    }
+
+    FileDialog {
+        id: icoFileDialog
+        acceptLabel: "Load"
+
+        Connections {
+            target: icoButton
+
+            function onPressed() {
+                icoFileDialog.open()
             }
         }
     }

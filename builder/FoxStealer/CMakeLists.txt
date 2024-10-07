@@ -14,10 +14,11 @@ qt6_add_qml_module(FoxStealer
     VERSION 1.0
     RESOURCE_PREFIX "/qt/qml"
     QML_FILES
-        "DirectoryFontLoader.qml"
-        "EventListSimulator.qml"
         "Constants.qml"
+        "DirectoryFontLoader.qml"
         "EventListModel.qml"
+        "EventListSimulator.qml"
+        "FsPayloadGeneratingService.qml"
 )
 
 

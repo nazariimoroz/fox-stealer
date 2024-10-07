@@ -12,12 +12,17 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
+    engine.setOutputWarningsToStandardError(true);
     const QUrl url(mainQmlFile);
     QObject::connect(
                 &engine, &QQmlApplicationEngine::objectCreated, &app,
-                [url](QObject *obj, const QUrl &objUrl) {
+                [url, &engine](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl)
+        {
+            const auto error = engine.catchError();
+            QDebug(QtFatalMsg) << error.toString();
             QCoreApplication::exit(-1);
+        }
     }, Qt::QueuedConnection);
 
     engine.addImportPath(QCoreApplication::applicationDirPath() + "/qml");
