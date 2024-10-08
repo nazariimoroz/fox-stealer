@@ -4,13 +4,21 @@ import Service
 Item {
     id: root
 
-    required property var icoFileDialog
+    required property var mainUi
 
     property var payloadGeneratingService: PayloadGeneratingService {}
 
+    Connections {
+        target: mainUi
+
+        function onCheckPressed() {
+            payloadGeneratingService.checkTgBotToken(mainUi.botTokenText
+                , mainUi.chatIdText)
+        }
+    }
 
     Connections {
-        target: icoFileDialog
+        target: mainUi.icoFileDialog
 
         function onAccepted() {
             payloadGeneratingService.selectIco(

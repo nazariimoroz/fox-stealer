@@ -18,6 +18,18 @@ Pane {
     property int baseSpacing: 10
     property alias icoFileDialog: icoFileDialog
 
+    property alias botTokenText: botTokenTextField.text
+    property alias chatIdText: chatIdTextField.text
+
+    signal checkPressed
+
+    Connections {
+        target: checkButton
+        function onPressed() {
+            mainFrame.checkPressed()
+        }
+    }
+
     ColumnLayout {
         id: columnLayout
         anchors.fill: parent

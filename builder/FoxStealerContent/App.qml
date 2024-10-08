@@ -17,7 +17,7 @@ Window {
     }
 
     FsPayloadGeneratingService {
-        icoFileDialog: mainScreen.icoFileDialog
+        mainUi: mainScreen
     }
 }
 

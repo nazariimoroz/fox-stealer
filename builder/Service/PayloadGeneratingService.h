@@ -12,8 +12,11 @@ class PayloadGeneratingService : public QObject
 public:
     explicit PayloadGeneratingService(QObject* parent = nullptr);
 
-public slots:
-    void selectIco(const QString& PathToIco);
+    Q_INVOKABLE bool checkTgBotToken(const QString& botToken
+        , const QString& chatId);
+
+public:
+    void selectIco(const QString& pathToIco);
 };
 
 
